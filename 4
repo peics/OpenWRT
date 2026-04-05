@@ -1,0 +1,97 @@
+#!/bin/sh
+
+# ==========================================
+# ImmortalWRT 本地管理脚本
+# ==========================================
+
+# 颜色定义
+C_RED='\033[1;31m'
+C_GREEN='\033[1;32m'
+C_YELLOW='\033[1;33m'
+C_CYAN='\033[36m'
+C_WHITE='\033[1;37m' # 强制高亮纯白色
+C_RESET='\033[0m'
+
+# 确保 upload 目录存在
+mkdir -p /tmp/upload
+
+# ================= 菜单系统 =================
+
+show_menu() {
+    echo -ne "\033[0m"
+    clear
+    
+    echo -e "${C_CYAN}=========================================================${C_RESET}"
+    echo -e "                 ${C_GREEN}ImmortalWRT管理脚本${C_RESET}                 "
+    echo -e "${C_CYAN}=========================================================${C_RESET}"
+    
+    echo -e "${C_YELLOW}  1.${C_WHITE} 更新软件源${C_RESET}"
+    echo -e "${C_YELLOW}  2.${C_WHITE} 备份系统${C_RESET}"
+    echo -e "${C_YELLOW}  3.${C_WHITE} 恢复系统${C_RESET}"
+    echo -e "${C_YELLOW}  4.${C_WHITE} 更新 Clash 应用${C_RESET}"
+    echo -e "${C_RED}  0.${C_WHITE} 退出脚本${C_RESET}"
+    echo -e "${C_CYAN}=========================================================${C_RESET}"
+    
+    echo -ne "${C_WHITE}请输入对应数字并按回车: ${C_RESET}"
+}
+
+while true; do
+    show_menu
+    read choice
+    echo ""
+    
+    echo -ne "\033[0m"
+    
+    case $choice in
+        1)
+            echo -e "${C_YELLOW}[开始] 正在更新软件源...${C_RESET}"
+            opkg update
+            echo -e "${C_GREEN}[完成] 软件源更新完成！${C_RESET}"
+            ;;
+        2)
+            echo -e "${C_YELLOW}[开始] 正在备份系统...${C_RESET}"
+            sysupgrade -b /tmp/upload/backup.tar.gz
+            echo -e "${C_GREEN}[完成] 备份完成！${C_RESET}"
+            echo -e "${C_CYAN}[提示] 导出文件位置为：/tmp/upload/backup.tar.gz${C_RESET}"
+            ;;
+        3)
+            echo -e "${C_CYAN}[提示] 请将备份文件上传至 /tmp/upload/ 目录，且文件名为 backup.tar.gz${C_RESET}"
+            echo -ne "${C_WHITE}上传完成后，请输入 'y' 确认执行恢复 (按其他键取消): ${C_RESET}"
+            read confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                if [ -f "/tmp/upload/backup.tar.gz" ]; then
+                    echo -e "${C_YELLOW}[开始] 开始恢复系统...${C_RESET}"
+                    sysupgrade -r /tmp/upload/backup.tar.gz
+                else
+                    echo -e "${C_RED}[错误] 未找到文件：/tmp/upload/backup.tar.gz，请检查是否上传成功。${C_RESET}"
+                fi
+            else
+                echo -e "${C_RED}[提示] 已取消系统恢复。${C_RESET}"
+            fi
+            ;;
+        4)
+            echo -e "${C_YELLOW}[开始] 正在运行 Clash 应用更新脚本...${C_RESET}"
+            sh -c "$(curl -fsSL https://raw.githubusercontent.com/slobys/openclash-auto-installer/main/menu.sh)"
+            ;;
+        0)
+            echo -e "${C_GREEN}[退出] 正在清理操作痕迹并退出...${C_RESET}"
+            
+            # 清理当前屏幕显示的缓存
+            clear
+            
+            # 清理历史记录 (兼容 OpenWRT 的 ash 终端)
+            history -c 2>/dev/null
+            cat /dev/null > ~/.bash_history 2>/dev/null
+            history -w 2>/dev/null
+            
+            exit 0
+            ;;
+        *)
+            echo -e "${C_RED}[错误] 无效的输入，请重新输入数字！${C_RESET}"
+            ;;
+    esac
+    
+    echo ""
+    echo -ne "${C_WHITE}按回车键返回主菜单...${C_RESET}"
+    read -r
+done
