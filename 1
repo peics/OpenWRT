@@ -1,1 +1,59 @@
+#!/bin/sh
 
+# 确保 upload 目录存在
+mkdir -p /tmp/upload
+
+while true; do
+    echo "======================================"
+    echo "       ImmortalWRT 本地管理菜单       "
+    echo "======================================"
+    echo "1. 更新软件源"
+    echo "2. 更新 Clash 应用"
+    echo "3. 备份系统"
+    echo "4. 恢复系统"
+    echo "0. 退出"
+    echo "======================================"
+    read -p "请输入选项 [0-4]: " choice
+
+    case $choice in
+        1)
+            echo "-> 正在更新软件源..."
+            opkg update
+            echo "-> 软件源更新完成！"
+            ;;
+        2)
+            echo "-> 正在运行 Clash 应用更新脚本..."
+            sh -c "$(curl -fsSL https://raw.githubusercontent.com/slobys/openclash-auto-installer/main/menu.sh)"
+            ;;
+        3)
+            echo "-> 正在备份系统..."
+            # 使用标准的 OpenWrt/ImmortalWRT 备份命令
+            sysupgrade -b /tmp/upload/backup.tar.gz
+            echo "-> 备份完成！"
+            echo "-> 导出文件位置为：/tmp/upload/backup.tar.gz"
+            ;;
+        4)
+            echo "-> 请将备份文件上传至 /tmp/upload/ 目录，且文件名为 backup.tar.gz"
+            read -p "上传完成后，请输入 'y' 确认执行恢复 (按其他键取消): " confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                if [ -f "/tmp/upload/backup.tar.gz" ]; then
+                    echo "-> 开始恢复系统..."
+                    # 使用标准的 OpenWrt/ImmortalWRT 恢复命令
+                    sysupgrade -r /tmp/upload/backup.tar.gz
+                else
+                    echo "-> [错误] 未找到文件：/tmp/upload/backup.tar.gz，请检查是否上传成功。"
+                fi
+            else
+                echo "-> 已取消系统恢复。"
+            fi
+            ;;
+        0)
+            echo "-> 退出管理脚本。"
+            exit 0
+            ;;
+        *)
+            echo "-> [错误] 无效选项，请重新输入。"
+            ;;
+    esac
+    echo ""
+done
